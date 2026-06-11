@@ -27,6 +27,7 @@ app.use('/api', deployRoutes);
 app.get('/:slug', (req, res) => {
     const slug = req.params.slug;
     
+    
     // Skip if it's an API route or static file
     if (slug === 'api' || slug === 'projects' || slug.includes('.')) {
         return res.status(404).send('Not Found');
