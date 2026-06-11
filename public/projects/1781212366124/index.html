@@ -1,0 +1,84 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Saurabh IDE</title>
+  <style>
+* {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+}
+
+body {
+  min-height: 100vh;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  background: linear-gradient(135deg, #0f172a, #1e293b);
+  color: white;
+  font-family: Inter, Arial, sans-serif;
+}
+
+.container {
+  text-align: center;
+  padding: 40px;
+}
+
+h1 {
+  font-size: 3rem;
+  margin-bottom: 15px;
+  background: linear-gradient(90deg, #38bdf8, #818cf8);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+}
+
+.subtitle {
+  font-size: 1.2rem;
+  color: #cbd5e1;
+}
+
+.author {
+  margin-top: 10px;
+  color: #94a3b8;
+}
+
+button {
+  margin-top: 30px;
+  padding: 14px 28px;
+  border: none;
+  border-radius: 10px;
+  background: #3b82f6;
+  color: white;
+  font-size: 1rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.3s ease;
+}
+
+button:hover {
+  transform: translateY(-3px);
+  background: #2563eb;
+  box-shadow: 0 10px 25px rgba(59, 130, 246, 0.35);
+}
+</style>
+</head>
+<body>
+  <div class="container">
+    <h1 id="title">Hello Coder</h1>
+    <p class="subtitle">Welcome to your coding playground</p>
+    <p class="author">by Saurabh Singh</p>
+    <button id="btn">Start Coding</button>
+  </div>
+  <script>
+const btn = document.getElementById("btn");
+const title = document.getElementById("title");
+
+btn.addEventListener("click", () => {
+  title.textContent = "Happy Coding";
+  btn.textContent = "Let's Build";
+});
+</script>
+</body>
+</html>
