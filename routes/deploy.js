@@ -30,11 +30,11 @@ router.post('/publish', async (req, res) => {
         // Deploy to Netlify if token is available
         if (NETLIFY_API_TOKEN) {
             try {
-                // Create a new Netlify site
+                // Create a new Netlify site with custom name
                 const siteResponse = await axios.post(
                     'https://api.netlify.com/api/v1/sites',
                     {
-                        name: `${customSlug}-${Date.now()}`.toLowerCase()
+                        name: customSlug.toLowerCase()
                     },
                     {
                         headers: {
@@ -45,7 +45,7 @@ router.post('/publish', async (req, res) => {
                 );
 
                 const siteId = siteResponse.data.id;
-                const netlifyUrl = siteResponse.data.url;
+                const siteName = siteResponse.data.name;
 
                 // Create zip file content (Netlify expects a zip file)
                 const FormData = require('form-data');
@@ -71,15 +71,19 @@ router.post('/publish', async (req, res) => {
 
                 const message = projectId ? 'Project re-published to Netlify successfully!' : 'Project published to Netlify successfully!';
                 
+                // Fix URL - remove https:// if already present
+                let deployUrl = deployResponse.data.ssl_url || siteResponse.data.ssl_url || `${siteName}.netlify.app`;
+                deployUrl = deployUrl.replace(/^https?:\/\//, ''); // Remove existing protocol
+                
                 return res.json({ 
                     success: true, 
-                    url: `https://${deployResponse.data.ssl_url || netlifyUrl}`,
+                    url: `https://${deployUrl}`,
                     projectId: customSlug.toLowerCase(),
                     message,
                     netlifyInfo: {
                         siteId: siteId,
-                        deploymentId: deployResponse.data.id,
-                        deployUrl: deployResponse.data.deploy_ssl_url
+                        siteName: siteName,
+                        deploymentId: deployResponse.data.id
                     }
                 });
 
