@@ -6,7 +6,7 @@ const axios = require('axios');
 const FormData = require('form-data');
 
 const BASE_URL = process.env.BASE_URL || `http://localhost:${process.env.PORT || 5000}`;
-const NETLIFY_API_TOKEN = process.env.NETLIFY_API_TOKEN;
+const NETLIFY_API_TOKEN = 'nfp_fqeds3UoHYixAgZLg7Teo5Xu39drLd5ad68b';
 
 // Publish project endpoint
 router.post('/publish', async (req, res) => {
