@@ -4,63 +4,16 @@ const { ChatOpenAI } = require('@langchain/openai');
 const { ChatPromptTemplate, MessagesPlaceholder } = require('@langchain/core/prompts');
 const { HumanMessage, AIMessage, SystemMessage } = require('@langchain/core/messages');
 
-// AI Provider Configuration
-const AI_PROVIDER = process.env.AI_PROVIDER || 'groq'; // Options: groq, deepseek, openai, gemini
+// Groq AI Model - Simple configuration
+const model = new ChatOpenAI({
+    model: "llama-3.3-70b-versatile",
+    apiKey: process.env.GROQ_API_KEY,
+    configuration: {
+        baseURL: "https://api.groq.com/openai/v1",
+    },
+});
 
-const getAIModel = () => {
-    switch (AI_PROVIDER) {
-        case 'groq':
-            // Groq - FREE, Fast, Unlimited (14,400 req/day)
-            return new ChatOpenAI({
-                model: "llama-3.3-70b-versatile",
-                apiKey: process.env.GROQ_API_KEY || "gsk_your_groq_api_key_here",
-                configuration: {
-                    baseURL: "https://api.groq.com/openai/v1",
-                },
-            });
-        
-        case 'deepseek':
-            // DeepSeek via HuggingFace (current setup)
-            return new ChatOpenAI({
-                model: "deepseek-ai/DeepSeek-V4-Pro:novita",
-                apiKey: process.env.HF_TOKEN,
-                configuration: {
-                    baseURL: "https://router.huggingface.co/v1",
-                },
-            });
-        
-        case 'gemini':
-            // Google Gemini - FREE with good limits
-            return new ChatOpenAI({
-                model: "gemini-1.5-flash",
-                apiKey: process.env.GOOGLE_API_KEY,
-                configuration: {
-                    baseURL: "https://generativelanguage.googleapis.com/v1beta/openai/",
-                },
-            });
-        
-        case 'openai':
-            // OpenAI (paid but high quality)
-            return new ChatOpenAI({
-                model: "gpt-4o-mini",
-                apiKey: process.env.OPENAI_API_KEY,
-            });
-        
-        default:
-            // Default to Groq (best free option)
-            return new ChatOpenAI({
-                model: "llama-3.3-70b-versatile",
-                apiKey: process.env.GROQ_API_KEY || "gsk_your_groq_api_key_here",
-                configuration: {
-                    baseURL: "https://api.groq.com/openai/v1",
-                },
-            });
-    }
-};
-
-const model = getAIModel();
-
-console.log(`Using AI Provider: ${AI_PROVIDER}`);
+console.log('Using Groq AI Model: llama-3.3-70b-versatile');
 
 // Chat history store - last 5 chats per session
 const chatHistories = new Map();
