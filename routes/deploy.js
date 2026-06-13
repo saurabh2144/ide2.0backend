@@ -11,7 +11,7 @@ const NETLIFY_API_TOKEN = 'nfp_fqeds3UoHYixAgZLg7Teo5Xu39drLd5ad68b';
 // Publish project endpoint
 router.post('/publish', async (req, res) => {
     try {
-        const { mergedHtml, projectName, customSlug, projectId } = req.body;
+        const { mergedHtml, projectName, customSlug, projectId, siteId } = req.body;
 
         if (!mergedHtml) {
             return res.status(400).json({ error: 'mergedHtml is required' });
@@ -30,62 +30,113 @@ router.post('/publish', async (req, res) => {
         // Deploy to Netlify if token is available
         if (NETLIFY_API_TOKEN) {
             try {
-                // Create a new Netlify site with custom name
-                const siteResponse = await axios.post(
-                    'https://api.netlify.com/api/v1/sites',
-                    {
-                        name: customSlug.toLowerCase()
-                    },
-                    {
-                        headers: {
-                            'Authorization': `Bearer ${NETLIFY_API_TOKEN}`,
-                            'Content-Type': 'application/json'
+                let netlifyResponse;
+                
+                // If siteId exists, update existing site (republish)
+                if (siteId) {
+                    console.log('Republishing to existing site:', siteId);
+                    
+                    // Create form data for deployment
+                    const FormData = require('form-data');
+                    const form = new FormData();
+                    
+                    form.append('index.html', Buffer.from(mergedHtml), {
+                        filename: 'index.html',
+                        contentType: 'text/html'
+                    });
+
+                    // Update existing site
+                    const deployResponse = await axios.post(
+                        `https://api.netlify.com/api/v1/sites/${siteId}/deploys`,
+                        form,
+                        {
+                            headers: {
+                                'Authorization': `Bearer ${NETLIFY_API_TOKEN}`,
+                                ...form.getHeaders()
+                            }
                         }
-                    }
-                );
+                    );
 
-                const siteId = siteResponse.data.id;
-                const siteName = siteResponse.data.name;
-
-                // Create zip file content (Netlify expects a zip file)
-                const FormData = require('form-data');
-                const form = new FormData();
-                
-                // Add index.html to the form
-                form.append('index.html', Buffer.from(mergedHtml), {
-                    filename: 'index.html',
-                    contentType: 'text/html'
-                });
-
-                // Deploy to Netlify
-                const deployResponse = await axios.post(
-                    `https://api.netlify.com/api/v1/sites/${siteId}/deploys`,
-                    form,
-                    {
-                        headers: {
-                            'Authorization': `Bearer ${NETLIFY_API_TOKEN}`,
-                            ...form.getHeaders()
+                    // Get site info
+                    const siteInfo = await axios.get(
+                        `https://api.netlify.com/api/v1/sites/${siteId}`,
+                        {
+                            headers: {
+                                'Authorization': `Bearer ${NETLIFY_API_TOKEN}`
+                            }
                         }
-                    }
-                );
+                    );
 
-                const message = projectId ? 'Project re-published to Netlify successfully!' : 'Project published to Netlify successfully!';
-                
-                // Fix URL - remove https:// if already present
-                let deployUrl = deployResponse.data.ssl_url || siteResponse.data.ssl_url || `${siteName}.netlify.app`;
-                deployUrl = deployUrl.replace(/^https?:\/\//, ''); // Remove existing protocol
-                
-                return res.json({ 
-                    success: true, 
-                    url: `https://${deployUrl}`,
-                    projectId: customSlug.toLowerCase(),
-                    message,
-                    netlifyInfo: {
+                    const deployUrl = siteInfo.data.ssl_url || siteInfo.data.url || `https://${siteInfo.data.name}.netlify.app`;
+                    
+                    return res.json({ 
+                        success: true, 
+                        url: deployUrl,
+                        projectId: customSlug.toLowerCase(),
                         siteId: siteId,
-                        siteName: siteName,
-                        deploymentId: deployResponse.data.id
-                    }
-                });
+                        message: 'Site redeployed successfully!',
+                        netlifyInfo: {
+                            siteId: siteId,
+                            siteName: siteInfo.data.name,
+                            deploymentId: deployResponse.data.id
+                        }
+                    });
+                    
+                } else {
+                    // Create new Netlify site (first publish)
+                    console.log('Creating new Netlify site:', customSlug);
+                    
+                    const siteResponse = await axios.post(
+                        'https://api.netlify.com/api/v1/sites',
+                        {
+                            name: customSlug.toLowerCase()
+                        },
+                        {
+                            headers: {
+                                'Authorization': `Bearer ${NETLIFY_API_TOKEN}`,
+                                'Content-Type': 'application/json'
+                            }
+                        }
+                    );
+
+                    const newSiteId = siteResponse.data.id;
+                    const siteName = siteResponse.data.name;
+
+                    // Deploy to new site
+                    const FormData = require('form-data');
+                    const form = new FormData();
+                    
+                    form.append('index.html', Buffer.from(mergedHtml), {
+                        filename: 'index.html',
+                        contentType: 'text/html'
+                    });
+
+                    const deployResponse = await axios.post(
+                        `https://api.netlify.com/api/v1/sites/${newSiteId}/deploys`,
+                        form,
+                        {
+                            headers: {
+                                'Authorization': `Bearer ${NETLIFY_API_TOKEN}`,
+                                ...form.getHeaders()
+                            }
+                        }
+                    );
+
+                    const deployUrl = siteResponse.data.ssl_url || siteResponse.data.url || `https://${siteName}.netlify.app`;
+                    
+                    return res.json({ 
+                        success: true, 
+                        url: deployUrl,
+                        projectId: customSlug.toLowerCase(),
+                        siteId: newSiteId,
+                        message: 'Site published successfully!',
+                        netlifyInfo: {
+                            siteId: newSiteId,
+                            siteName: siteName,
+                            deploymentId: deployResponse.data.id
+                        }
+                    });
+                }
 
             } catch (netlifyError) {
                 console.error('Netlify deployment error:', netlifyError.response?.data || netlifyError.message);
@@ -121,7 +172,7 @@ function deployLocally(mergedHtml, customSlug, projectId, res) {
     );
 
     const url = `${BASE_URL}/${customSlug.toLowerCase()}`;
-    const message = projectId ? 'Project re-published locally successfully!' : 'Project published locally successfully!';
+    const message = projectId ? 'Site redeployed locally successfully!' : 'Site published locally successfully!';
     
     return res.json({ 
         success: true, 
