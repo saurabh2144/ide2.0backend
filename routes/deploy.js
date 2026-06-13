@@ -148,9 +148,17 @@ router.post('/publish', async (req, res) => {
                 }
 
             } catch (netlifyError) {
-                console.error('Netlify deployment error:', netlifyError.response?.data || netlifyError.message);
-                // Fall back to local deployment if Netlify fails
-                return deployLocally(mergedHtml, customSlug, projectId, res);
+                console.error('Netlify deployment error:');
+                console.error('Status:', netlifyError.response?.status);
+                console.error('Data:', netlifyError.response?.data);
+                console.error('Message:', netlifyError.message);
+                
+                // Don't fallback - return error to user
+                return res.status(500).json({ 
+                    success: false,
+                    error: 'Netlify deployment failed: ' + (netlifyError.response?.data?.message || netlifyError.message),
+                    details: netlifyError.response?.data
+                });
             }
         } else {
             // No Netlify token, deploy locally
@@ -190,5 +198,18 @@ function deployLocally(mergedHtml, customSlug, projectId, res) {
         message
     });
 }
+
+// Get deployments endpoint (for compatibility)
+router.get('/deployments', async (req, res) => {
+    try {
+        // Return empty array for now - can be extended later
+        res.json({ 
+            success: true, 
+            deployments: [] 
+        });
+    } catch (error) {
+        res.status(500).json({ error: error.message });
+    }
+});
 
 module.exports = router;
