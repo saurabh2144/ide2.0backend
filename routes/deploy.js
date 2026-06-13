@@ -21,8 +21,17 @@ function createZipBuffer(htmlContent) {
         archive.on('end', () => resolve(Buffer.concat(chunks)));
         archive.on('error', (err) => reject(err));
 
-        // Add index.html to the archive
-        archive.append(htmlContent, { name: 'index.html' });
+        // Add index.html to the archive with proper content-type hint
+        // Make sure HTML has proper DOCTYPE and structure
+        const properHtml = htmlContent.trim().startsWith('<!DOCTYPE') 
+            ? htmlContent 
+            : `<!DOCTYPE html>\n${htmlContent}`;
+            
+        archive.append(properHtml, { 
+            name: 'index.html',
+            mode: 0o644 // Set proper file permissions
+        });
+        
         archive.finalize();
     });
 }
