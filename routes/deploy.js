@@ -5,7 +5,8 @@ const fs = require('fs');
 const axios = require('axios');
 const archiver = require('archiver');
 
-const BASE_URL = process.env.BASE_URL || `http://localhost:${process.env.PORT || 5000}`;
+// Force production URL on Render
+const BASE_URL = process.env.RENDER ? 'https://myidebackend.onrender.com' : (process.env.BASE_URL || `http://localhost:${process.env.PORT || 5000}`);
 const NETLIFY_API_TOKEN = process.env.NETLIFY_API_TOKEN || 'nfp_fqeds3UoHYixAgZLg7Teo5Xu39drLd5ad68b';
 
 // Helper function to create ZIP buffer from HTML content
