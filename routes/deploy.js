@@ -12,7 +12,7 @@ const NETLIFY_API_TOKEN = 'nfp_fqeds3UoHYixAgZLg7Teo5Xu39drLd5ad68b';
 function createZipBuffer(htmlContent) {
     return new Promise((resolve, reject) => {
         const chunks = [];
-        const archive = archiver.create('zip', {
+        const archive = archiver('zip', {
             zlib: { level: 9 }
         });
 
