@@ -3,10 +3,28 @@ const router = express.Router();
 const path = require('path');
 const fs = require('fs');
 const axios = require('axios');
-const FormData = require('form-data');
+const archiver = require('archiver');
 
 const BASE_URL = process.env.BASE_URL || `http://localhost:${process.env.PORT || 5000}`;
 const NETLIFY_API_TOKEN = 'nfp_fqeds3UoHYixAgZLg7Teo5Xu39drLd5ad68b';
+
+// Helper function to create ZIP buffer from HTML content
+function createZipBuffer(htmlContent) {
+    return new Promise((resolve, reject) => {
+        const chunks = [];
+        const archive = archiver('zip', {
+            zlib: { level: 9 }
+        });
+
+        archive.on('data', (chunk) => chunks.push(chunk));
+        archive.on('end', () => resolve(Buffer.concat(chunks)));
+        archive.on('error', (err) => reject(err));
+
+        // Add index.html to the archive
+        archive.append(htmlContent, { name: 'index.html' });
+        archive.finalize();
+    });
+}
 
 // Publish project endpoint
 router.post('/publish', async (req, res) => {
@@ -30,30 +48,24 @@ router.post('/publish', async (req, res) => {
         // Deploy to Netlify if token is available
         if (NETLIFY_API_TOKEN) {
             try {
-                let netlifyResponse;
-                
                 // If siteId exists, update existing site (republish)
                 if (siteId) {
                     console.log('Republishing to existing site:', siteId);
                     
-                    // Create form data for deployment
-                    const FormData = require('form-data');
-                    const form = new FormData();
-                    
-                    form.append('index.html', Buffer.from(mergedHtml), {
-                        filename: 'index.html',
-                        contentType: 'text/html'
-                    });
+                    // Create a ZIP file with the HTML content
+                    const zipBuffer = await createZipBuffer(mergedHtml);
 
-                    // Update existing site
+                    // Deploy to Netlify with ZIP
                     const deployResponse = await axios.post(
                         `https://api.netlify.com/api/v1/sites/${siteId}/deploys`,
-                        form,
+                        zipBuffer,
                         {
                             headers: {
                                 'Authorization': `Bearer ${NETLIFY_API_TOKEN}`,
-                                ...form.getHeaders()
-                            }
+                                'Content-Type': 'application/zip'
+                            },
+                            maxContentLength: Infinity,
+                            maxBodyLength: Infinity
                         }
                     );
 
@@ -102,23 +114,20 @@ router.post('/publish', async (req, res) => {
                     const newSiteId = siteResponse.data.id;
                     const siteName = siteResponse.data.name;
 
-                    // Deploy to new site
-                    const FormData = require('form-data');
-                    const form = new FormData();
-                    
-                    form.append('index.html', Buffer.from(mergedHtml), {
-                        filename: 'index.html',
-                        contentType: 'text/html'
-                    });
+                    // Create a ZIP file with the HTML content
+                    const zipBuffer = await createZipBuffer(mergedHtml);
 
+                    // Deploy to new site with ZIP
                     const deployResponse = await axios.post(
                         `https://api.netlify.com/api/v1/sites/${newSiteId}/deploys`,
-                        form,
+                        zipBuffer,
                         {
                             headers: {
                                 'Authorization': `Bearer ${NETLIFY_API_TOKEN}`,
-                                ...form.getHeaders()
-                            }
+                                'Content-Type': 'application/zip'
+                            },
+                            maxContentLength: Infinity,
+                            maxBodyLength: Infinity
                         }
                     );
 
