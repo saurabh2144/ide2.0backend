@@ -4,13 +4,14 @@ const path = require('path');
 const fs = require('fs');
 const axios = require('axios');
 const archiver = require('archiver');
+const FormData = require('form-data');
 
 // Force production URL on Render
 const BASE_URL = process.env.RENDER ? 'https://myidebackend.onrender.com' : (process.env.BASE_URL || `http://localhost:${process.env.PORT || 5000}`);
 const NETLIFY_API_TOKEN = process.env.NETLIFY_API_TOKEN || 'nfp_fqeds3UoHYixAgZLg7Teo5Xu39drLd5ad68b';
 
 // Helper function to create ZIP buffer from HTML content
-function createZipBuffer(htmlContent) {
+async function createZipBuffer(htmlContent) {
     return new Promise((resolve, reject) => {
         const chunks = [];
         const archive = archiver('zip', {
@@ -21,15 +22,13 @@ function createZipBuffer(htmlContent) {
         archive.on('end', () => resolve(Buffer.concat(chunks)));
         archive.on('error', (err) => reject(err));
 
-        // Add index.html to the archive with proper content-type hint
-        // Make sure HTML has proper DOCTYPE and structure
-        const properHtml = htmlContent.trim().startsWith('<!DOCTYPE') 
-            ? htmlContent 
-            : `<!DOCTYPE html>\n${htmlContent}`;
-            
-        archive.append(properHtml, { 
+        // Ensure HTML has proper structure
+        let finalHtml = htmlContent.trim();
+        
+        // Add index.html at root of ZIP - Netlify will automatically serve this
+        archive.append(finalHtml, { 
             name: 'index.html',
-            mode: 0o644 // Set proper file permissions
+            date: new Date()
         });
         
         archive.finalize();
