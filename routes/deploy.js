@@ -145,7 +145,7 @@ router.post('/publish', async (req, res) => {
                         if (nameExists) {
                             return res.status(400).json({ 
                                 success: false,
-                                error: '⚠️ This name is already taken on Netlify. Please choose a different name.',
+                                error: 'This name is already taken on Netlify. Please choose a different name.',
                                 nameTaken: true
                             });
                         }
@@ -199,7 +199,7 @@ router.post('/publish', async (req, res) => {
                 if (netlifyError.response?.data?.errors?.subdomain) {
                     return res.status(400).json({ 
                         success: false,
-                        error: '⚠️ This name is already taken on Netlify. Please choose a different name.',
+                        error: 'This name is already taken on Netlify. Please choose a different name.',
                         nameTaken: true
                     });
                 }
@@ -229,7 +229,7 @@ function deployLocally(mergedHtml, customSlug, projectId, res) {
     if (!projectId && fs.existsSync(projectPath)) {
         return res.status(400).json({ 
             success: false,
-            error: '⚠️ This project name already exists. Please choose a different name.',
+            error: 'This project name already exists. Please choose a different name.',
             nameTaken: true
         });
     }
