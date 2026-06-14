@@ -5,35 +5,60 @@ const fs = require('fs');
 const axios = require('axios');
 const archiver = require('archiver');
 const FormData = require('form-data');
+const crypto = require('crypto');
 
 // Force production URL on Render
 const BASE_URL = process.env.RENDER ? 'https://myidebackend.onrender.com' : (process.env.BASE_URL || `http://localhost:${process.env.PORT || 5000}`);
 const NETLIFY_API_TOKEN = process.env.NETLIFY_API_TOKEN || 'nfp_fqeds3UoHYixAgZLg7Teo5Xu39drLd5ad68b';
 
-// Helper function to create ZIP buffer from HTML content
-async function createZipBuffer(htmlContent) {
-    return new Promise((resolve, reject) => {
-        const chunks = [];
-        const archive = archiver('zip', {
-            zlib: { level: 9 }
-        });
-
-        archive.on('data', (chunk) => chunks.push(chunk));
-        archive.on('end', () => resolve(Buffer.concat(chunks)));
-        archive.on('error', (err) => reject(err));
-
-        // Ensure HTML is a string
+// Helper function to deploy using Netlify's file-based API
+async function deployToNetlifyWithFiles(siteId, htmlContent, token) {
+    try {
+        // Ensure proper HTML
         const htmlString = String(htmlContent);
+        const htmlBuffer = Buffer.from(htmlString, 'utf-8');
+        const sha1 = crypto.createHash('sha1').update(htmlBuffer).digest('hex');
         
-        // Add index.html at root of ZIP with proper options
-        archive.append(Buffer.from(htmlString, 'utf-8'), { 
-            name: 'index.html',
-            mode: 0o644,
-            date: new Date()
-        });
+        // Step 1: Create a deploy with file metadata
+        const deployData = {
+            files: {
+                '/index.html': sha1
+            }
+        };
         
-        archive.finalize();
-    });
+        const createDeployResponse = await axios.post(
+            `https://api.netlify.com/api/v1/sites/${siteId}/deploys`,
+            deployData,
+            {
+                headers: {
+                    'Authorization': `Bearer ${token}`,
+                    'Content-Type': 'application/json'
+                }
+            }
+        );
+        
+        const deployId = createDeployResponse.data.id;
+        const requiredFiles = createDeployResponse.data.required || [];
+        
+        // Step 2: Upload the file if required
+        if (requiredFiles.includes(sha1)) {
+            await axios.put(
+                `https://api.netlify.com/api/v1/deploys/${deployId}/files/index.html`,
+                htmlBuffer,
+                {
+                    headers: {
+                        'Authorization': `Bearer ${token}`,
+                        'Content-Type': 'application/octet-stream'
+                    }
+                }
+            );
+        }
+        
+        return createDeployResponse.data;
+    } catch (error) {
+        console.error('Netlify file-based deployment error:', error.response?.data || error.message);
+        throw error;
+    }
 }
 
 // Publish project endpoint
@@ -67,22 +92,8 @@ router.post('/publish', async (req, res) => {
                 if (siteId) {
                     console.log('Republishing to existing site:', siteId);
                     
-                    // Create a ZIP file with the HTML content
-                    const zipBuffer = await createZipBuffer(mergedHtml);
-
-                    // Deploy to Netlify with ZIP
-                    const deployResponse = await axios.post(
-                        `https://api.netlify.com/api/v1/sites/${siteId}/deploys`,
-                        zipBuffer,
-                        {
-                            headers: {
-                                'Authorization': `Bearer ${NETLIFY_API_TOKEN}`,
-                                'Content-Type': 'application/zip'
-                            },
-                            maxContentLength: Infinity,
-                            maxBodyLength: Infinity
-                        }
-                    );
+                    // Use file-based deployment API
+                    const deployResponse = await deployToNetlifyWithFiles(siteId, mergedHtml, NETLIFY_API_TOKEN);
 
                     // Get site info
                     const siteInfo = await axios.get(
@@ -106,7 +117,7 @@ router.post('/publish', async (req, res) => {
                         netlifyInfo: {
                             siteId: siteId,
                             siteName: siteInfo.data.name,
-                            deploymentId: deployResponse.data.id
+                            deploymentId: deployResponse.id
                         }
                     });
                     
@@ -158,22 +169,8 @@ router.post('/publish', async (req, res) => {
                     const newSiteId = siteResponse.data.id;
                     const siteName = siteResponse.data.name;
 
-                    // Create a ZIP file with the HTML content
-                    const zipBuffer = await createZipBuffer(mergedHtml);
-
-                    // Deploy to new site with ZIP
-                    const deployResponse = await axios.post(
-                        `https://api.netlify.com/api/v1/sites/${newSiteId}/deploys`,
-                        zipBuffer,
-                        {
-                            headers: {
-                                'Authorization': `Bearer ${NETLIFY_API_TOKEN}`,
-                                'Content-Type': 'application/zip'
-                            },
-                            maxContentLength: Infinity,
-                            maxBodyLength: Infinity
-                        }
-                    );
+                    // Use file-based deployment API for new site
+                    const deployResponse = await deployToNetlifyWithFiles(newSiteId, mergedHtml, NETLIFY_API_TOKEN);
 
                     const deployUrl = siteResponse.data.ssl_url || siteResponse.data.url || `https://${siteName}.netlify.app`;
                     
@@ -187,7 +184,7 @@ router.post('/publish', async (req, res) => {
                         netlifyInfo: {
                             siteId: newSiteId,
                             siteName: siteName,
-                            deploymentId: deployResponse.data.id
+                            deploymentId: deployResponse.id
                         }
                     });
                 }
