@@ -22,12 +22,13 @@ async function createZipBuffer(htmlContent) {
         archive.on('end', () => resolve(Buffer.concat(chunks)));
         archive.on('error', (err) => reject(err));
 
-        // Ensure HTML has proper structure
-        let finalHtml = htmlContent.trim();
+        // Ensure HTML is a string
+        const htmlString = String(htmlContent);
         
-        // Add index.html at root of ZIP - Netlify will automatically serve this
-        archive.append(finalHtml, { 
+        // Add index.html at root of ZIP with proper options
+        archive.append(Buffer.from(htmlString, 'utf-8'), { 
             name: 'index.html',
+            mode: 0o644,
             date: new Date()
         });
         
