@@ -8,8 +8,8 @@ const FormData = require('form-data');
 const crypto = require('crypto');
 
 // Force production URL on Render
-const BASE_URL = process.env.RENDER ? 'https://myidebackend.onrender.com' : (process.env.BASE_URL || `http://localhost:${process.env.PORT || 5000}`);
-const NETLIFY_API_TOKEN = process.env.NETLIFY_API_TOKEN || 'nfp_fqeds3UoHYixAgZLg7Teo5Xu39drLd5ad68b';
+const BASE_URL = 'http://localhost:5000';
+const NETLIFY_API_TOKEN = 'nfp_fqeds3UoHYixAgZLg7Teo5Xu39drLd5ad68b';
 
 // Helper function to deploy using Netlify's file-based API
 async function deployToNetlifyWithFiles(siteId, htmlContent, token) {

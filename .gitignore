@@ -6,3 +6,5 @@ dist/
 build/
 .vscode/
 .idea/
+temp-projects/
+workspaces/
