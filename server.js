@@ -33,6 +33,11 @@ const workspaceRoutes = require('./routes/workspace');
 // Error handlers
 const { errorHandler, notFound } = require('./middleware/errorHandler');
 
+// Health check endpoint for hosting platforms
+app.get('/healthcheck', (req, res) => {
+    res.status(200).json({ status: 'ok', timestamp: new Date() });
+});
+
 // Health check
 app.get('/api/health', (req, res) => {
     res.json({ 
