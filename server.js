@@ -14,7 +14,7 @@ connectDatabase();
 
 // Middleware
 app.use(cors({
-    origin: ['http://localhost:3000', 'http://127.0.0.1:3000'],
+    origin: ['http://localhost:3000', 'http://127.0.0.1:3000', 'https://ide2-0frontend.vercel.app/'],
     credentials: true,
     methods: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH', 'OPTIONS'],
     allowedHeaders: ['Content-Type', 'Authorization'],
@@ -40,8 +40,8 @@ app.get('/healthcheck', (req, res) => {
 
 // Health check
 app.get('/api/health', (req, res) => {
-    res.json({ 
-        status: 'ok', 
+    res.json({
+        status: 'ok',
         version: '2.0.0',
         features: {
             workspace: true,
@@ -62,14 +62,14 @@ app.use('/api/workspace', workspaceRoutes); // New workspace API
 // Dynamic route to serve project without .html extension - ROOT LEVEL
 app.get('/:slug', (req, res) => {
     const slug = req.params.slug;
-    
+
     // Skip if it's an API route or static file
     if (slug === 'api' || slug === 'projects' || slug.includes('.')) {
         return res.status(404).send('Not Found');
     }
-    
+
     const filePath = path.join(__dirname, 'public', 'projects', slug, 'index.html');
-    
+
     if (fs.existsSync(filePath)) {
         res.sendFile(filePath);
     } else {
@@ -90,7 +90,7 @@ app.use('/projects', express.static(path.join(__dirname, 'public', 'projects'), 
 app.get('/projects/:slug', (req, res) => {
     const slug = req.params.slug;
     const filePath = path.join(__dirname, 'public', 'projects', slug, 'index.html');
-    
+
     if (fs.existsSync(filePath)) {
         res.setHeader('Content-Type', 'text/html; charset=utf-8');
         res.sendFile(filePath);
